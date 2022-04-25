@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
-	"fmt"
-
-	// "encoding/binary"
 	"io"
 	"os"
 )
@@ -19,16 +16,14 @@ import (
 }; */
 
 type InputEvent struct {
-	A    uint64 // timeval part 1
-	B    uint64 // timeval part 2
-	Type uint16
-	Code uint16
-	V1   uint16
-	V2   uint16
+	Timeval Timeval
+	Type    uint16
+	Code    uint16
+	V1      uint16
+	V2      uint16
 }
 
 type Event struct {
-	IE       InputEvent
 	Char     rune
 	Scancode uint16
 }
@@ -143,26 +138,22 @@ var CodeMap = map[uint16]Scancode{
 	0x56: {'-', '-'},
 	0x58: {'\n', '\n'},
 	// 0x: {'', ''},
-
 }
 
 func (k *Keyboard) run() {
-	// var err error
-	println("run")
-	_ = fmt.Sprintln("")
+
+	inputEventSize := 8 + len(Timeval{}) // Is there a better way to do this ?
 
 	// Custom scanner that splits on 24 byte chunks
 	scanner := bufio.NewScanner(k.r)
 	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
-		if len(data) < 24 {
+		if len(data) < inputEventSize {
 			return 0, nil, nil
 		}
-		// fmt.Printf("Split: % X\nMatch: % X (%d bytes)\n", data, data[:24], len(data[:24]))
-		return 24, data[:24], nil
+		return inputEventSize, data[:inputEventSize], nil
 	})
 
-	lastA := uint64(0)
-	lastB := uint64(0)
+	var lastTimeval Timeval
 	lastScancode := uint16(0)
 
 	for scanner.Scan() {
@@ -173,18 +164,18 @@ func (k *Keyboard) run() {
 		binary.Read(bytes.NewBuffer(b), binary.LittleEndian, &ie)
 		// fmt.Printf("Read: %#v [% X]\n", ie, b)
 		if ie.Type == 4 && ie.Code == 4 { // Key down/up
-			lastA = ie.A
-			lastB = ie.B
+			lastTimeval = ie.Timeval
 			lastScancode = ie.V1
-		} else if ie.Type == 1 && ie.V1 == 1 && lastA == ie.A && lastB == ie.B {
+		} else if ie.Type == 1 && ie.V1 == 1 && lastTimeval.Equals(ie.Timeval) {
 			sc, ok := CodeMap[lastScancode]
 			if ok {
 				e := &Event{
-					IE:       ie,
 					Char:     sc.Key,
 					Scancode: lastScancode,
 				}
 				k.C <- e
+				// } else {
+				// 	println("Unknown scancode", lastScancode)
 			}
 			// } else {
 			// 	fmt.Printf("Read: %#v [% X]\n", ie, b)
