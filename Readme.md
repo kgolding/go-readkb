@@ -1,4 +1,6 @@
-OMG... reading keyboard scancodes is a nightmare!!!
+# Reading USB Keyboard using raw events
+
+> OMG... reading keyboard scancodes is a nightmare!!!
 
 This code will read raw scancodes and decode 'normal' keypresses to a go channel.
 
@@ -46,6 +48,7 @@ Where `event20` comes from the output above.
 `sudo cat /dev/input/event20 | hexdump`
 
 ### References:
-http://www.quadibloc.com/comp/scan.htm
-https://www.kernel.org/doc/html/v4.14/input/event-codes.html#input-event-codes
-https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/input-event-codes.h#L39
+
+* http://www.quadibloc.com/comp/scan.htm
+* https://www.kernel.org/doc/html/v4.14/input/event-codes.html#input-event-codes
+* https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/input-event-codes.h#L39
