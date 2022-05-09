@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github/kgolding/go-readkb"
 	"os"
 	"time"
+
+	"github.com/kgolding/go-readkb"
 )
 
 func main() {
