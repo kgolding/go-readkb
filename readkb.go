@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"io"
 	"os"
+	"sync"
 )
 
 /*	struct input_event {
@@ -32,6 +33,7 @@ type Keyboard struct {
 	r   io.Reader
 	C   chan *Event
 	Err error
+	sync.Once
 }
 
 func NewFromPath(dev string) (*Keyboard, error) {
@@ -55,9 +57,10 @@ func (k *Keyboard) Close() {
 	if k == nil {
 		return
 	}
-	if closer, ok := k.r.(io.Closer); ok {
-		closer.Close()
-	}
+	k.Do(func() {
+		close(k.C)
+		k = nil
+	})
 }
 
 type Scancode struct {
@@ -181,4 +184,5 @@ func (k *Keyboard) run() {
 			// 	fmt.Printf("Read: %#v [% X]\n", ie, b)
 		}
 	}
+	k.Close()
 }
