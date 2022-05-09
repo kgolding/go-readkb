@@ -55,8 +55,7 @@ func (k *Keyboard) Close() {
 	if k == nil {
 		return
 	}
-	closer, ok := k.r.(io.Closer)
-	if ok {
+	if closer, ok := k.r.(io.Closer); ok {
 		closer.Close()
 	}
 }
@@ -137,14 +136,13 @@ var CodeMap = map[uint16]Scancode{
 	0x55: {'*', '*'},
 	0x56: {'-', '-'},
 	0x58: {'\n', '\n'},
-	// 0x: {'', ''},
 }
 
 func (k *Keyboard) run() {
+	// InputEvent size varies depending on the CPU due to the Linux TimeVal definition
+	inputEventSize := binary.Size(InputEvent{})
 
-	inputEventSize := 8 + len(Timeval{}) // Is there a better way to do this ?
-
-	// Custom scanner that splits on 24 byte chunks
+	// Custom scanner that splits on inputEventSize byte chunks
 	scanner := bufio.NewScanner(k.r)
 	scanner.Split(func(data []byte, atEOF bool) (int, []byte, error) {
 		if len(data) < inputEventSize {
@@ -153,16 +151,18 @@ func (k *Keyboard) run() {
 		return inputEventSize, data[:inputEventSize], nil
 	})
 
+	// It takes more than one InputEvent to detect a key being pressed, so
+	// we keep track of the last InputEvent for reference
 	var lastTimeval Timeval
 	lastScancode := uint16(0)
 
 	for scanner.Scan() {
 		b := scanner.Bytes()
-		// fmt.Printf("Read: % X\n", b)
-
 		var ie InputEvent
-		binary.Read(bytes.NewBuffer(b), binary.LittleEndian, &ie)
-		// fmt.Printf("Read: %#v [% X]\n", ie, b)
+		err := binary.Read(bytes.NewBuffer(b), binary.LittleEndian, &ie)
+		if err != nil {
+			continue
+		}
 		if ie.Type == 4 && ie.Code == 4 { // Key down/up
 			lastTimeval = ie.Timeval
 			lastScancode = ie.V1
